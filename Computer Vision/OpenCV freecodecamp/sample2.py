@@ -5,12 +5,8 @@ import cv2 as cv
 capture = cv.VideoCapture('Sample videos/video_1.mp4')
 
 while True:
-  isSuccess, frame = capture.read()
-  
-  if not isSuccess:
-    break
-
-  cv.imshow('Video', frame)
+  isTrue, frame = capture.read()
+  cv.imshow('video', frame)
 
   if cv.waitKey(20) & 0xFF==ord('d'):
     break
