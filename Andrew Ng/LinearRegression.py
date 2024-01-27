@@ -1,55 +1,59 @@
+import os
+os.chdir('d:\Machine learning\Machine Learning Git-repo\Andrew Ng')
+
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-# Generate some sample data
-np.random.seed(42)
-X = 2 * np.random.rand(100, 1)
-y = 4 + 3 * X + np.random.randn(100, 1)
+dataset = pd.read_csv('CSV data/insurance.csv')
+X = dataset[['bmi']].values
+y = dataset['charges'].values 
 
-# Convert to Pandas DataFrame
-data = pd.DataFrame({'X': X.flatten(), 'y': y.flatten()})
+X_b = np.c_[np.ones((len(X), 1)), X]
+theta = np.zeros((X_b.shape[1], 1))
+learning_rate = 16e-6
+max_iter = 5000
 
-# Linear Regression using Gradient Descent
 def mean_squared_cost(X, y, theta):
     m = len(y)
     predictions = X.dot(theta)
     cost = (1 / (2 * m)) * np.sum((predictions - y) ** 2)
     return cost
 
-def gradient_descent(X, y, theta, learning_rate, iterations):
+def gradient_descent(X, y, theta, learning_rate):
     m = len(y)
-    cost_history = np.zeros(iterations)
+    predictions = X.dot(theta)
+    errors = predictions - y
+    theta = theta - (1 / m) * learning_rate * X.T.dot(errors)
+    cost = mean_squared_cost(X, y, theta)
+    return theta, cost
 
-    for i in range(iterations):
-        predictions = X.dot(theta)
-        errors = predictions - y
-        theta = theta - (1 / m) * learning_rate * X.T.dot(errors)
-        cost_history[i] = mean_squared_cost(X, y, theta)
+def optimizer(X, y, theta, learning_rate, max_iterations, tolerance=1e-6):
+    cost_history = []
+
+    for i in range(max_iterations):
+        theta, cost = gradient_descent(X, y, theta, learning_rate)
+        cost_history.append(cost)
+
+        if i % 100 == 0:
+            print(f'Iteration {i}, Cost: {cost}')
+
+        if len(cost_history) > 1 and abs(cost_history[-2] - cost_history[-1]) < tolerance:
+            print(f'Converged at iteration {i}, Cost: {cost}')
+            break
 
     return theta, cost_history
 
-# adding bias to x
-X_b = np.c_[np.ones((100, 1)), X]
+# theta, cost_history = gradient_descent(X_b, y, theta, learning_rate, iterations)
 
-# parameters initialized
-theta = np.random.randn(2, 1)
+theta, cost_history = optimizer(X_b, y, theta, learning_rate, max_iterations=max_iter)
 
-# hyperparameters
-learning_rate = 0.01
-iterations = 1000
-
-# gradient descent
-theta, cost_history = gradient_descent(X_b, y, theta, learning_rate, iterations)
-
-# Plot the data and the linear regression line
 plt.scatter(X, y)
 plt.plot(X, X_b.dot(theta), color='red')
-plt.xlabel('X')
-plt.ylabel('y')
+plt.xlabel('Years of Experience')
+plt.ylabel('Salary')
 plt.title('Simple Linear Regression')
 plt.show()
 
-# Print the final parameters and cost history
-print('Theta:', theta)
+print('weights:', theta)
 print('Final Cost:', cost_history[-1])
