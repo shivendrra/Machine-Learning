@@ -11,7 +11,7 @@ y = dataset['charges'].values
 
 X_b = np.c_[np.ones((len(X), 1)), X]
 theta = np.zeros((X_b.shape[1], 1))
-learning_rate = 16e-6
+learning_rate = 3e-6
 max_iter = 5000
 
 def mean_squared_cost(X, y, theta):
@@ -44,7 +44,7 @@ def optimizer(X, y, theta, learning_rate, max_iterations, tolerance=1e-6):
 
     return theta, cost_history
 
-# theta, cost_history = gradient_descent(X_b, y, theta, learning_rate, iterations)
+# theta, cost_history = gradient_descent(X_b, y, theta, learning_rate)
 
 theta, cost_history = optimizer(X_b, y, theta, learning_rate, max_iterations=max_iter)
 
