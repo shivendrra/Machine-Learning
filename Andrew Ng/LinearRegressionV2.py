@@ -3,7 +3,9 @@ current_directory = os.path.dirname(os.path.abspath(__file__))
 os.chdir(current_directory)
 
 import pandas as pd
-data = pd.read_csv('CSV data/insurance.csv')
+data = pd.read_csv('CSV data/Salary_Data.csv')
+x_data = data['Experience']
+y_data = data['Salary']
 
 def loss_function(m, b, points):
   totalError = 0
@@ -13,36 +15,37 @@ def loss_function(m, b, points):
     totalError += (y - (m*x + b))**2
   totalError / float(len(points))
 
-def gradient_descent(m_now, b_now, points, Lr):
+def gradient_descent(m_now, b_now, points, lr):
   m_grad = 0
   b_grad = 0
   n = len(points)
 
   for i in range(n):
-    x = points.iloc[i].bmi
-    y = points.iloc[i].charges
+    x = points.iloc[i].Experience
+    y = points.iloc[i].Salary
     m_grad += -(2/n) * x * (y - (m_now * x + b_now))
     b_grad += -(2/n) * (y - (m_now * x + b_now))
-
-  m = m_now - m_grad * Lr
-  b = b_now - b_grad * Lr
-
+  m = m_now - m_grad * lr
+  b = b_now - b_grad * lr
   return m, b
 
 m = 0
 b = 0
-lr = 1e6
-epochs = 200
+lr = 1e-3
+epochs = 30
 
 for i in range(epochs):
-  if i % 50 == 0:
-    print(f"epoch: {i}")
   m, b = gradient_descent(m, b, data, lr)
+  if i % 10 == 0:
+    print(f"epochs: {epochs}")
+    print(f"m: {m}, b: {b}")
 
-print(m, b)
+print(f"final m: {m}, final b: {b}")
 
 import matplotlib.pyplot as plt
 
-plt.scatter(data.charges, data.bmi, color="black")
-plt.plot(list(range(20, 80)), [m * x + b for x in range(20,80)], color='red')
+plt.scatter(x_data, y_data, color="black")
+plt.plot([m * x + b for x in range(len(data))], color='red')
+plt.xlabel('Experience')
+plt.ylabel('Salary')
 plt.show()
