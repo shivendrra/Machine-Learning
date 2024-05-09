@@ -1,3 +1,3 @@
 # Machine-Learning
 
-this repository contains various machine learning projects and learnings
+just a backup repo to keep learnings & useful ml codes
