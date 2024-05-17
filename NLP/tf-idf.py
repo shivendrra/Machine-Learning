@@ -1,43 +1,26 @@
 import math
-import string
+import re
 
-def tokenize(text):
-  """
-  Tokenizes the input text by converting to lowercase, removing punctuation, and splitting on whitespace.
-  Args:
-    text (str): The input text.
-  Returns:
-    list: List of word tokens.
-  """
-  text = text.lower()
-  text = text.translate(str.maketrans('', '', string.punctuation))
-  tokens = text.split()
-  return tokens
+def sent_tokenize(corpus):
+  pattern = r'(?<=[.!?])\s+'
+  sent = re.split(pattern, corpus.strip())
+  sent = [i.replace('\n', ' ') for i in sent]
+  return sent
+
+def word_tokenize(corpus):
+  pattern = r'\b\w+(?:-\w+)*\b|``|\'\'|\[\d+\]|\(|\)|\d+/0|e\.g\.|\.|,|;|:|!'
+  corpus = re.findall(pattern, corpus)
+  return corpus
 
 def build_vocabulary(corpus):
-  """
-  Builds a vocabulary from a list of documents.
-  Args:
-    corpus (list of str): List of documents.
-  Returns:
-    list: List of unique words in the corpus.
-  """
   vocabulary = set()
   for document in corpus:
-    tokens = tokenize(document)
+    tokens = word_tokenize(document)
     vocabulary.update(tokens)
   return sorted(vocabulary)
 
 def term_frequency(document, vocabulary):
-  """
-  Calculates the term frequency for each word in the vocabulary for a given document.
-  Args:
-    document (str): The document.
-    vocabulary (list): The vocabulary list.
-  Returns:
-    list: Term frequency vector for the document.
-  """
-  tokens = tokenize(document)
+  tokens = word_tokenize(document)
   tf = [0] * len(vocabulary)
   for token in tokens:
     if token in vocabulary:
@@ -47,30 +30,14 @@ def term_frequency(document, vocabulary):
   return tf
 
 def inverse_document_frequency(corpus, vocabulary):
-  """
-  Calculates the inverse document frequency for each word in the vocabulary.
-  Args:
-    corpus (list of str): List of documents.
-    vocabulary (list): The vocabulary list.
-  Returns:
-    list: Inverse document frequency vector.
-  """
   idf = [0] * len(vocabulary)
   num_documents = len(corpus)
   for i, word in enumerate(vocabulary):
-    count = sum(1 for document in corpus if word in tokenize(document))
+    count = sum(1 for document in corpus if word in word_tokenize(document))
     idf[i] = math.log((num_documents + 1) / (count + 1)) + 1
   return idf
 
 def tf_idf(corpus):
-  """
-  Converts a corpus of documents into a TF-IDF representation.
-  Args:
-    corpus (list of str): List of documents.
-  Returns:
-    list of list: TF-IDF representation of the corpus.
-    list: Vocabulary list.
-  """
   vocabulary = build_vocabulary(corpus)
   idf = inverse_document_frequency(corpus, vocabulary)
   tf_idf_vectors = []
@@ -80,12 +47,16 @@ def tf_idf(corpus):
     tf_idf_vectors.append(tf_idf_vector)
   return tf_idf_vectors, vocabulary
 
-corpus = [ "The quick brown fox jumps over the lazy dog.", "The dog barks at the fox.", "Quick brown fox and quick dog."
-]
+text = """
+Implementations of the bag-of-words model might involve using frequencies of words in a document to represent its contents.
+The frequencies can be "normalized" by the inverse of document frequency, or tf-idf. Additionally, for the specific purpose of classification,
+supervised alternatives have been developed to account for the class label of a document.[4] Lastly, binary (presence/absence or 1/0)
+weighting is used in place of frequencies for some problems (e.g., this option is implemented in the WEKA machine learning software system).
+"""
 
-tf_idf_vectors, vocabulary = tf_idf(corpus)
+vectors, vocabulary = tf_idf(sent_tokenize(text))
 
 print("Vocabulary:", vocabulary)
 print("TF-IDF Vectors:")
-for vector in tf_idf_vectors:
+for vector in vectors:
   print(vector)
