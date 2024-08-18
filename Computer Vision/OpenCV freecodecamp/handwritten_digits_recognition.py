@@ -1,59 +1,68 @@
-import os
-import cv2
-import numpy as np
-import tensorflow as tf
-import matplotlib.pyplot as plt
+import torch
+import torchvision
+import torchvision.transforms as transforms
+from torch.utils.data import DataLoader
 
-# Decide if to load an existing model or to train a new one
-train_new_model = True
+transform = transforms.Compose([
+  transforms.ToTensor(),
+  transforms.Normalize((0.5,), (0.5,))
+])
 
-if train_new_model:
-    # Loading the MNIST data set with samples and splitting it
-    mnist = tf.keras.datasets.mnist
-    (X_train, y_train), (X_test, y_test) = mnist.load_data()
+train_dataset = torchvision.datasets.MNIST(root='./data', train=True, download=True, transform=transform)
+test_dataset = torchvision.datasets.MNIST(root='./data', train=False, download=True, transform=transform)
 
-    # Normalizing the data (making length = 1)
-    X_train = tf.keras.utils.normalize(X_train, axis=1)
-    X_test = tf.keras.utils.normalize(X_test, axis=1)
+train_loader = DataLoader(dataset=train_dataset, batch_size=64, shuffle=True)
+test_loader = DataLoader(dataset=test_dataset, batch_size=64, shuffle=False)
 
-    # Create a neural network model
-    # Add one flattened input layer for the pixels
-    # Add two dense hidden layers
-    # Add one dense output layer for the 10 digits
-    model = tf.keras.models.Sequential()
-    model.add(tf.keras.layers.Flatten())
-    model.add(tf.keras.layers.Dense(units=128, activation=tf.nn.relu))
-    model.add(tf.keras.layers.Dense(units=128, activation=tf.nn.relu))
-    model.add(tf.keras.layers.Dense(units=10, activation=tf.nn.softmax))
+import torch.nn as nn
+import torch.nn.functional as F
 
-    # Compiling and optimizing model
-    model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
+class CNN(nn.Module):
+  def __init__(self):
+    super(CNN, self).__init__()
+    self.conv1 = nn.Conv2d(in_channels=1, out_channels=16, kernel_size=3, stride=1, padding=1)
+    self.conv2 = nn.Conv2d(in_channels=16, out_channels=32, kernel_size=3, stride=1, padding=1)
+    self.pool = nn.MaxPool2d(kernel_size=2, stride=2, padding=0)
+    self.fc1 = nn.Linear(32 * 7 * 7, 128)
+    self.fc2 = nn.Linear(128, 10)
+    self.dropout = nn.Dropout(0.25)
 
-    # Training the model
-    model.fit(X_train, y_train, epochs=3)
+  def forward(self, x):
+    x = self.pool(F.relu(self.conv1(x)))
+    x = self.pool(F.relu(self.conv2(x)))
+    x = x.view(-1, 32 * 7 * 7)
+    x = F.relu(self.fc1(x))
+    x = self.dropout(x)
+    x = self.fc2(x)
+    return x
 
-    # Evaluating the model
-    val_loss, val_acc = model.evaluate(X_test, y_test)
-    print(val_loss)
-    print(val_acc)
+model = CNN()
+criterion = nn.CrossEntropyLoss()
+optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
 
-    # Saving the model
-    model.save('handwritten_digits.model')
-else:
-    # Load the model
-    model = tf.keras.models.load_model('handwritten_digits.model')
+num_epochs = 10
+for epoch in range(num_epochs):
+  running_loss = 0.0
+  for images, labels in train_loader:
+    optimizer.zero_grad()
+    outputs = model(images)
+    loss = criterion(outputs, labels)
+    loss.backward()
+    optimizer.step()
 
-# Load custom images and predict them
-image_number = 1
-while os.path.isfile('digits/digit{}.png'.format(image_number)):
-    try:
-        img = cv2.imread('digits/digit{}.png'.format(image_number))[:,:,0]
-        img = np.invert(np.array([img]))
-        prediction = model.predict(img)
-        print("The number is probably a {}".format(np.argmax(prediction)))
-        plt.imshow(img[0], cmap=plt.cm.binary)
-        plt.show()
-        image_number += 1
-    except:
-        print("Error reading image! Proceeding with next image...")
-        image_number += 1
+    running_loss += loss.item()
+
+  print(f'Epoch [{epoch+1}/{num_epochs}], Loss: {running_loss/len(train_loader):.4f}')
+
+correct = 0
+total = 0
+with torch.no_grad():
+  for images, labels in test_loader:
+    outputs = model(images)
+    _, predicted = torch.max(outputs.data, 1)
+    total += labels.size(0)
+    correct += (predicted == labels).sum().item()
+
+print(f'Accuracy of the model on the 10000 test images: {100 * correct / total:.2f}%')
+
+torch.save(model.state_dict(), 'mnist_cnn.pth')
